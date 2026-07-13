@@ -167,7 +167,7 @@ auto main(int argc, char* argv[]) -> int
     // Write the new mesh
     Logger()->info("Writing output mesh...");
     fs::path outputPath = parsed["output-mesh"].as<std::string>();
-    WriteMesh(outputPath, mesh, uvMap, texture, opts);
+    WriteMesh(outputPath, mesh, uvMap, texture, {}, opts);
 
     Logger()->info("Done.");
     return EXIT_SUCCESS;

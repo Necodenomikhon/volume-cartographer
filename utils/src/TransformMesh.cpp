@@ -121,7 +121,9 @@ auto main(int argc, char** argv) -> int
     // Write the new mesh
     std::cout << "Writing mesh..." << std::endl;
     fs::path outputPath = parsed["output-mesh"].as<std::string>();
-    vc::WriteMesh(outputPath, output, meshGroup.uv, meshGroup.texture);
+    vc::WriteMesh(
+        outputPath, output, meshGroup.uv, meshGroup.texture,
+        meshGroup.faceUVs);
 
     ///// Write the final transformations /////
     if (parsed.count("output-tfm") > 0) {

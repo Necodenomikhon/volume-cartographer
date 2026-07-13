@@ -47,6 +47,7 @@ void volcart::WriteMesh(
     const ITKMesh::Pointer& mesh,
     const UVMap::Pointer& uv,
     const cv::Mat& texture,
+    const std::vector<std::array<cv::Vec2d, 3>>& faceUVs,
     const MeshWriterOpts& opts)
 {
     if (IsFileType(path, {"obj"})) {
@@ -57,6 +58,9 @@ void volcart::WriteMesh(
         if (uv) {
             writer.setUVMap(uv);
             writer.setTexture(texture);
+        }
+        if (not faceUVs.empty()) {
+            writer.setFaceUVs(faceUVs);
         }
         writer.write();
     }

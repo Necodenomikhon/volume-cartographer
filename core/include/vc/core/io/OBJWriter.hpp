@@ -2,9 +2,11 @@
 
 /** @file */
 
+#include <array>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <vector>
 
 #include <opencv2/core.hpp>
 
@@ -59,6 +61,20 @@ public:
     /** @brief Set the input UV Map */
     void setUVMap(UVMap::Pointer uvMap);
 
+    /**
+     * @brief Set exact per-face-corner UVs
+     *
+     * When set, these are written instead of (not in addition to) the
+     * per-point UVs from setUVMap(): one `vt` per face-corner (i.e. 3 per
+     * face) rather than one per point. This preserves UV seams - the same
+     * point legitimately having a different UV on each incident face -
+     * which a point-keyed UVMap cannot represent. Must be indexed
+     * identically to the mesh's cells, in the same per-corner order as each
+     * cell's point IDs (see OBJReader::getFaceUVs() /
+     * MeshReaderResult::faceUVs).
+     */
+    void setFaceUVs(std::vector<std::array<cv::Vec2d, 3>> faceUVs);
+
     /** @brief Set the input texture image */
     void setTexture(cv::Mat uvImg);
 
@@ -107,8 +123,13 @@ private:
     ITKMesh::Pointer mesh_;
     /** Input UV map */
     UVMap::Pointer uvMap_;
+    /** Optional exact per-face-corner UVs, indexed like the mesh's cells */
+    std::vector<std::array<cv::Vec2d, 3>> faceUVs_;
     /** Input texture image */
     cv::Mat texture_;
+
+    /** Whether any UV data (per-point or per-corner) has been provided */
+    [[nodiscard]] auto hasUVs_() const -> bool;
 
     /** Write the OBJ file */
     void write_obj_();

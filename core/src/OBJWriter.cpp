@@ -34,6 +34,15 @@ OBJWriter::OBJWriter(
 void OBJWriter::setPath(const filesystem::path& path) { outputPath_ = path; }
 void OBJWriter::setMesh(ITKMesh::Pointer mesh) { mesh_ = std::move(mesh); }
 void OBJWriter::setUVMap(UVMap::Pointer uvMap) { uvMap_ = std::move(uvMap); }
+void OBJWriter::setFaceUVs(std::vector<std::array<cv::Vec2d, 3>> faceUVs)
+{
+    faceUVs_ = std::move(faceUVs);
+}
+
+auto OBJWriter::hasUVs_() const -> bool
+{
+    return (uvMap_ and not uvMap_->empty()) or not faceUVs_.empty();
+}
 void OBJWriter::setTexture(cv::Mat uvImg) { texture_ = std::move(uvImg); }
 void OBJWriter::setTextureFormat(std::string fmt)
 {
@@ -51,8 +60,8 @@ void OBJWriter::write()
     // Write the OBJ
     write_obj_();
 
-    // Write texture stuff if we have a UV coordinate map
-    if (uvMap_ and not uvMap_->empty()) {
+    // Write texture stuff if we have UV data
+    if (hasUVs_()) {
         write_mtl_();
         write_texture_();
     }
@@ -71,8 +80,8 @@ void OBJWriter::write_obj_()
     write_header_();
     write_vertices_();
 
-    // Only write texture information if we have a UV map
-    if (uvMap_ and not uvMap_->empty()) {
+    // Only write texture information if we have UV data
+    if (hasUVs_()) {
         write_texture_coordinates_();
     }
 
@@ -186,16 +195,15 @@ void OBJWriter::write_vertices_()
 }
 
 // Write the UV coordinates that will be attached to points: 'vt u v'
+//
+// If faceUVs_ has been provided, writes one vt per face-corner (3 per face)
+// instead of one per point, preserving any UV seams. In this mode, vt
+// indices are not tracked through pointLinks_ - write_faces_() computes them
+// directly from face/corner position instead, since the same point may
+// resolve to different vt indices on different faces.
 void OBJWriter::write_texture_coordinates_()
 {
-    if (uvMap_->empty()) {
-        return;
-    }
     Logger()->debug("Writing texture coordinates...");
-
-    // Ensure coordinates are relative to bottom left
-    auto startingOrigin = uvMap_->origin();
-    uvMap_->setOrigin(UVMap::Origin::BottomLeft);
 
     // Write mtl path, relative to OBJ
     auto mtlpath = outputPath_.filename();
@@ -203,6 +211,19 @@ void OBJWriter::write_texture_coordinates_()
     outputMesh_ << "# Texture information\n";
     outputMesh_ << "mtllib " << mtlpath.string() << "\n";
     outputMesh_ << "usemtl default\n";
+
+    if (not faceUVs_.empty()) {
+        for (const auto& corners : faceUVs_) {
+            for (const auto& uv : corners) {
+                outputMesh_ << "vt " << uv[0] << " " << uv[1] << "\n";
+            }
+        }
+        return;
+    }
+
+    // Ensure coordinates are relative to bottom left
+    auto startingOrigin = uvMap_->origin();
+    uvMap_->setOrigin(UVMap::Origin::BottomLeft);
 
     // Iterate over all of the saved coordinates in our coordinate map
     std::uint32_t vtIndex = 1;
@@ -232,29 +253,37 @@ void OBJWriter::write_faces_()
     outputMesh_ << "# Faces: " << mesh_->GetNumberOfCells() << "\n";
 
     // Iterate over the faces of the mesh
+    std::uint32_t faceIndex = 0;
     ITKPointInCellIterator point;
     for (auto cell = mesh_->GetCells()->Begin();
-         cell != mesh_->GetCells()->End(); ++cell) {
+         cell != mesh_->GetCells()->End(); ++cell, ++faceIndex) {
         // Starts a new face line
         outputMesh_ << "f ";
 
         // Iterate over the points of this face
+        std::uint32_t cornerIndex = 0;
         for (point = cell.Value()->PointIdsBegin();
-             point != cell.Value()->PointIdsEnd(); ++point) {
+             point != cell.Value()->PointIdsEnd(); ++point, ++cornerIndex) {
 
             cv::Vec3i pointLink = pointLinks_.find(*point)->second;
 
             outputMesh_ << pointLink[0];
 
-            // Write the vtIndex
-            if (pointLink[1] != UNSET_VALUE) {
-                outputMesh_ << "/" << pointLink[1];
+            // Write the vtIndex: from faceUVs_'s per-corner position if
+            // provided (one vt per face-corner), else from pointLinks_ (one
+            // vt per point)
+            auto vtIndex = pointLink[1];
+            if (not faceUVs_.empty()) {
+                vtIndex = static_cast<int>(faceIndex * 3 + cornerIndex) + 1;
+            }
+            if (vtIndex != UNSET_VALUE) {
+                outputMesh_ << "/" << vtIndex;
             }
 
             // Write the vnIndex
             if (pointLink[2] != UNSET_VALUE) {
                 // Write a buffer slash if there wasn't a vtIndex
-                if (pointLink[1] == UNSET_VALUE) {
+                if (vtIndex == UNSET_VALUE) {
                     outputMesh_ << "/";
                 }
 

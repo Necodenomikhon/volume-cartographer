@@ -2,6 +2,7 @@
 
 #include <cstddef>
 
+#include "vc/core/io/MeshIO.hpp"
 #include "vc/core/io/OBJWriter.hpp"
 #include "vc/core/shapes/Plane.hpp"
 #include "vc/core/types/SimpleMesh.hpp"
@@ -72,4 +73,37 @@ TEST_F(OBJWriter, UntexturedMesh)
 
         idx++;
     }
+}
+
+// A read -> write -> read round trip through MeshIO must preserve exact
+// per-face-corner UVs (i.e. UV seams), not just collapse to the lossy
+// per-point map. This is the property that regressed silently when
+// vc_transform_mesh only had access to the per-point UVMap.
+TEST(OBJWriterIO, RoundTripPreservesFaceUVSeam)
+{
+    auto original = vc::ReadMesh("vc_core_OBJReader_UVSeam.obj");
+    ASSERT_FALSE(original.faceUVs.empty());
+
+    std::string path{"vc_core_OBJWriter_UVSeamRoundTrip.obj"};
+    ASSERT_NO_THROW(vc::WriteMesh(
+        path, original.mesh, original.uv, original.texture,
+        original.faceUVs));
+
+    auto roundTripped = vc::ReadMesh(path);
+    ASSERT_FALSE(roundTripped.faceUVs.empty());
+    ASSERT_EQ(roundTripped.faceUVs.size(), original.faceUVs.size());
+
+    for (std::size_t i = 0; i < original.faceUVs.size(); i++) {
+        for (std::size_t c = 0; c < 3; c++) {
+            EXPECT_EQ(roundTripped.faceUVs[i][c], original.faceUVs[i][c]);
+        }
+    }
+
+    // Point count/connectivity must be unaffected by the round trip
+    EXPECT_EQ(
+        roundTripped.mesh->GetNumberOfPoints(),
+        original.mesh->GetNumberOfPoints());
+    EXPECT_EQ(
+        roundTripped.mesh->GetNumberOfCells(),
+        original.mesh->GetNumberOfCells());
 }

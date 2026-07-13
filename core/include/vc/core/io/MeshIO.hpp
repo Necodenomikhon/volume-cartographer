@@ -59,11 +59,16 @@ struct MeshWriterOpts {
  * @param uv UVMap for the provided mesh. Required to write a textured mesh.
  * @param texture Texture image mapped by the provided UV Map. Required to
  * write a textured mesh.
+ * @param faceUVs Optional exact per-face-corner UVs (see
+ * MeshReaderResult::faceUVs). When provided and the output format supports
+ * it (currently OBJ only), written instead of (not in addition to) `uv`,
+ * preserving UV seams that `uv` cannot represent on its own.
  */
 void WriteMesh(
     const filesystem::path& path,
     const ITKMesh::Pointer& mesh,
     const UVMap::Pointer& uv = nullptr,
     const cv::Mat& texture = cv::Mat(),
+    const std::vector<std::array<cv::Vec2d, 3>>& faceUVs = {},
     const MeshWriterOpts& opts = {});
 }  // namespace volcart
