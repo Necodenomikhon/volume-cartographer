@@ -15,6 +15,7 @@ set(srcs
     src/AlignmentMarkerGenerator.cpp
     src/ThicknessTexture.cpp
     src/FlatteningError.cpp
+    src/TextureStackTexture.cpp
 )
 set(public_deps
     VC::core
@@ -77,6 +78,7 @@ set(test_srcs
     test/ABFTest.cpp
     test/FlatteningErrorTest.cpp
     test/PPMGeneratorTest.cpp
+    test/TextureStackTextureTest.cpp
 )
 
 # Add a test executable for each src

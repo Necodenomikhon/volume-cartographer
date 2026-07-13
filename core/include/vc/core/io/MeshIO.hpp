@@ -1,7 +1,9 @@
 #pragma once
 
+#include <array>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <opencv2/core.hpp>
 
@@ -20,6 +22,15 @@ struct MeshReaderResult {
     UVMap::Pointer uv;
     /** Texture image, if loaded a textured mesh. nullptr if not textured */
     cv::Mat texture;
+    /**
+     * Exact per-face-corner UV coordinates, indexed identically to mesh's
+     * cells (i.e. `faceUVs[i]` corresponds to the mesh's i-th cell). Unlike
+     * `uv`, which stores at most one UV per mesh point and so collapses UV
+     * seams, this preserves the correct value for every face-corner. Empty
+     * if the source format doesn't support per-corner UVs (e.g. PLY) or the
+     * mesh has none.
+     */
+    std::vector<std::array<cv::Vec2d, 3>> faceUVs;
 };
 
 /**

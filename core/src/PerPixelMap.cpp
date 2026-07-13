@@ -23,6 +23,11 @@ inline auto CellMapPath(const fs::path& p) -> fs::path
     return p.parent_path() / (p.stem().string() + "_cellmap.tif");
 }
 
+inline auto TextureCoordMapPath(const fs::path& p) -> fs::path
+{
+    return p.parent_path() / (p.stem().string() + "_uvmap.tif");
+}
+
 ///// Metadata /////
 void PerPixelMap::setDimensions(std::size_t h, std::size_t w)
 {
@@ -114,6 +119,10 @@ void PerPixelMap::WritePPM(const fs::path& path, const PerPixelMap& map)
     if (!map.cellMap_.empty()) {
         tiffio::WriteTIFF(CellMapPath(path), map.cellMap_);
     }
+
+    if (!map.textureCoordMap_.empty()) {
+        tiffio::WriteTIFF(TextureCoordMapPath(path), map.textureCoordMap_);
+    }
 }
 
 auto PerPixelMap::ReadPPM(const fs::path& path) -> PerPixelMap
@@ -138,6 +147,11 @@ auto PerPixelMap::ReadPPM(const fs::path& path) -> PerPixelMap
     if (ppm.cellMap_.empty()) {
         Logger()->warn(
             "Failed to read cell map: {}", CellMapPath(path).string());
+    }
+
+    auto textureCoordMapPath = TextureCoordMapPath(path);
+    if (fs::exists(textureCoordMapPath)) {
+        ppm.textureCoordMap_ = tiffio::ReadTIFF(textureCoordMapPath);
     }
 
     return ppm;
@@ -188,6 +202,11 @@ auto PerPixelMap::mask() const -> cv::Mat { return mask_; }
 void PerPixelMap::setMask(const cv::Mat& m) { mask_ = m.clone(); }
 auto PerPixelMap::cellMap() const -> cv::Mat { return cellMap_; }
 void PerPixelMap::setCellMap(const cv::Mat& m) { cellMap_ = m.clone(); }
+auto PerPixelMap::textureCoordMap() const -> cv::Mat { return textureCoordMap_; }
+void PerPixelMap::setTextureCoordMap(const cv::Mat& m)
+{
+    textureCoordMap_ = m.clone();
+}
 
 auto PerPixelMap::Crop(
     const PerPixelMap& map,
@@ -226,6 +245,11 @@ auto PerPixelMap::Crop(
     // Copy cell map
     if (not map.cellMap_.empty()) {
         map.cellMap_(roi).copyTo(out.cellMap_);
+    }
+
+    // Copy texture coordinate map
+    if (not map.textureCoordMap_.empty()) {
+        map.textureCoordMap_(roi).copyTo(out.textureCoordMap_);
     }
 
     return out;

@@ -107,7 +107,10 @@ auto main(int argc, char** argv) -> int
     // Load mesh
     vc::Logger()->info("Loading mesh...");
     fs::path inputPath = parsed["input-mesh"].as<std::string>();
-    auto [mesh, uv, texture] = vc::ReadMesh(inputPath);
+    auto meshFile = vc::ReadMesh(inputPath);
+    auto mesh = meshFile.mesh;
+    auto uv = meshFile.uv;
+    auto texture = meshFile.texture;
     vc::Logger()->info(
         "Mesh Loaded || Vertices: {} || Faces: {}", mesh->GetNumberOfPoints(),
         mesh->GetNumberOfCells());

@@ -119,6 +119,16 @@ target_link_libraries(vc_generate_ppm
     ${VC_FS_LIB}
 )
 
+## Render Texture Stack
+add_executable(vc_render_texture_stack src/RenderTextureStack.cpp)
+target_link_libraries(vc_render_texture_stack
+    VC::app_support
+    VC::core
+    VC::texturing
+    ${VC_FS_LIB}
+    Boost::program_options
+)
+
 ## Layers from PPM
 add_executable(vc_layers_from_ppm src/LayerFromPPM.cpp)
 target_link_libraries(vc_layers_from_ppm

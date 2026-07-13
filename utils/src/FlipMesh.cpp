@@ -95,7 +95,10 @@ auto main(int argc, char** argv) -> int
 
     // Load mesh
     fs::path inputPath = parsed["input-mesh"].as<std::string>();
-    auto [mesh, uv, texture] = vc::ReadMesh(inputPath);
+    auto meshFile = vc::ReadMesh(inputPath);
+    auto mesh = meshFile.mesh;
+    auto uv = meshFile.uv;
+    auto texture = meshFile.texture;
 
     // Update the mesh
     for (auto pt = mesh->GetPoints()->Begin(); pt != mesh->GetPoints()->End();

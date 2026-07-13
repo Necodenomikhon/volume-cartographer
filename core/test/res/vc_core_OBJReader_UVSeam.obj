@@ -1,0 +1,16 @@
+# Minimal fixture with a UV seam: v-index 2 is referenced with two different
+# vt indices across its two incident faces (2 and 5), simulating a mesh
+# exported with a UV chart boundary running through this vertex.
+v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 0.0 1.0 0.0
+v 1.0 1.0 0.0
+
+vt 0.0 0.0
+vt 1.0 0.0
+vt 0.0 1.0
+vt 1.0 1.0
+vt 5.0 5.0
+
+f 1/1 2/2 3/3
+f 2/5 4/4 3/3

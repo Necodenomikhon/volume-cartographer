@@ -1,5 +1,6 @@
 #include "vc/core/io/OBJReader.hpp"
 
+#include <array>
 #include <cstddef>
 #include <regex>
 #include <string>
@@ -27,6 +28,11 @@ auto OBJReader::getUVMap() -> UVMap::Pointer { return uvMap_; }
 // Get texture image
 auto OBJReader::getTextureMat() -> cv::Mat { return textureMat_; }
 
+auto OBJReader::getFaceUVs() -> std::vector<std::array<cv::Vec2d, 3>>
+{
+    return faceUVs_;
+}
+
 // Read the file
 auto OBJReader::read() -> ITKMesh::Pointer
 {
@@ -43,6 +49,7 @@ void OBJReader::reset_()
     normals_.clear();
     uvs_.clear();
     faces_.clear();
+    faceUVs_.clear();
     texturePath_.clear();
     textureMat_ = cv::Mat();
 }
@@ -253,6 +260,23 @@ void OBJReader::build_mesh_()
 
     // Build the faces and UV Map
     // Note: OBJs index vert info from 1
+    //
+    // A face-corner's v-index alone does not uniquely identify a UV or
+    // normal: OBJ allows the same v-index to be paired with different vt
+    // and/or vn indices in different faces (e.g. at a UV seam or a
+    // hard-shaded edge). uvMap_ and mesh_'s point data can only store one
+    // value per point ID, so where this happens, whichever face is
+    // processed last silently wins for point-based lookups. This is a
+    // deliberate simplification, not a bug: splitting the point to preserve
+    // per-corner fidelity would duplicate positions and disconnect faces
+    // that share an edge in the original topology, which breaks algorithms
+    // (e.g. ABF++ flattening) that require the mesh's geometric connectivity
+    // to remain a manifold. Callers that need exact per-corner UVs (e.g. to
+    // sample a source texture atlas) should use getFaceUVs() instead, which
+    // preserves the correct value for every face-corner independent of this
+    // point-based collapsing.
+    faceUVs_.clear();
+    faceUVs_.reserve(faces_.size());
     ITKCell::CellAutoPointer cell;
     ITKMesh::CellIdentifier cid = 0;
     for (const auto& face : faces_) {
@@ -262,6 +286,7 @@ void OBJReader::build_mesh_()
 
         cell.TakeOwnership(new ITKTriangle);
         auto idInCell = 0;
+        std::array<cv::Vec2d, VALID_FACE_SIZE> corners{};
         for (auto vinfo : face) {
             if (vinfo[0] - 1 < 0 ||
                 vinfo[0] - 1 >= static_cast<int>(vertices_.size())) {
@@ -269,7 +294,7 @@ void OBJReader::build_mesh_()
             }
             auto vertexID = vinfo[0] - 1;
 
-            cell->SetPointId(idInCell++, vertexID);
+            cell->SetPointId(idInCell, vertexID);
 
             if (vinfo[1] != NOT_PRESENT) {
                 if (vinfo[1] - 1 < 0 ||
@@ -277,6 +302,10 @@ void OBJReader::build_mesh_()
                     throw IOException("Out-of-range UV reference");
                 }
                 uvMap_->set(vertexID, uvs_[vinfo[1] - 1]);
+                corners[static_cast<std::size_t>(idInCell)] =
+                    uvs_[vinfo[1] - 1];
+            } else {
+                corners[static_cast<std::size_t>(idInCell)] = NULL_MAPPING;
             }
 
             if (vinfo[2] != NOT_PRESENT) {
@@ -286,8 +315,10 @@ void OBJReader::build_mesh_()
                 }
                 mesh_->SetPointData(vertexID, normals_[vinfo[2] - 1].val);
             }
+            idInCell++;
         }
         mesh_->SetCell(cid++, cell);
+        faceUVs_.push_back(corners);
     }
     uvMap_->setOrigin(UVMap::Origin::TopLeft);
 

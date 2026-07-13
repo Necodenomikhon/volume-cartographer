@@ -40,6 +40,11 @@ void PPMGenerator::setMesh(const ITKMesh::Pointer& m) { inputMesh_ = m; }
 
 void PPMGenerator::setUVMap(const UVMap::Pointer& u) { uvMap_ = u; }
 
+void PPMGenerator::setTextureFaceUVs(std::vector<std::array<cv::Vec2d, 3>> faceUVs)
+{
+    textureFaceUVs_ = std::move(faceUVs);
+}
+
 // Parameters
 void PPMGenerator::setDimensions(std::size_t h, std::size_t w)
 {
@@ -66,6 +71,14 @@ auto PPMGenerator::compute() -> PerPixelMap::Pointer
         throw std::invalid_argument(msg);
     }
 
+    if (not textureFaceUVs_.empty() and
+        textureFaceUVs_.size() != inputMesh_->GetNumberOfCells()) {
+        const auto* msg =
+            "Texture face UVs must be indexed identically to the mesh's "
+            "cells (one entry per cell)";
+        throw std::invalid_argument(msg);
+    }
+
     // Generate normals
     if (shading_ == Shading::Smooth &&
         inputMesh_->GetPointData()->Size() != inputMesh_->GetNumberOfPoints()) {
@@ -80,6 +93,10 @@ auto PPMGenerator::compute() -> PerPixelMap::Pointer
     cv::Mat mask = cv::Mat::zeros(height_, width_, CV_8UC1);
     cv::Mat cellMap = cv::Mat(height_, width_, CV_32SC1);
     cellMap = cv::Scalar::all(-1);
+    cv::Mat textureCoordMap;
+    if (not textureFaceUVs_.empty()) {
+        textureCoordMap = cv::Mat::zeros(height_, width_, CV_32FC2);
+    }
 
     // Create BVH for mesh
     std::vector<Triangle> triangles;
@@ -180,6 +197,22 @@ auto PPMGenerator::compute() -> PerPixelMap::Pointer
         // Assign the intensity value at the UV position
         mask.at<std::uint8_t>(intY, intX) = MASK_TRUE;
 
+        // Interpolate and assign the source texture UV coordinate, if given.
+        // Uses the exact per-corner UVs for this specific cell, rather than
+        // a per-point lookup, since the same point may legitimately have a
+        // different source UV on each of its incident faces (a seam).
+        if (not textureFaceUVs_.empty()) {
+            const auto& corners = textureFaceUVs_[cellId];
+            const cv::Vec3d texUVPts[3] = {
+                {corners[0][0], corners[0][1], 0.0},
+                {corners[1][0], corners[1][1], 0.0},
+                {corners[2][0], corners[2][1], 0.0}};
+            auto texUV = BarycentricToCartesian(
+                baryCoord, texUVPts[0], texUVPts[1], texUVPts[2]);
+            textureCoordMap.at<cv::Vec2f>(intY, intX) = {
+                static_cast<float>(texUV[0]), static_cast<float>(texUV[1])};
+        }
+
         // Assign 3D position to the lookup map
         ppm_->getMapping(y, x) = cv::Vec6d(
             xyz(0), xyz(1), xyz(2), xyzNorm(0), xyzNorm(1), xyzNorm(2));
@@ -189,6 +222,9 @@ auto PPMGenerator::compute() -> PerPixelMap::Pointer
     // Finish setting up the output
     ppm_->setMask(mask);
     ppm_->setCellMap(cellMap);
+    if (not textureFaceUVs_.empty()) {
+        ppm_->setTextureCoordMap(textureCoordMap);
+    }
 
     return ppm_;
 }

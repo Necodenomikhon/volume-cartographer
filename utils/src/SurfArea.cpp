@@ -31,7 +31,7 @@ auto main(const int argc, char** argv) -> int
     std::string segID;
     if (IsFileType(argv[2], {"obj", "ply"})) {
         // Load the mesh
-        const auto [mesh, uv, texture] = ReadMesh(argv[2]);
+        mesh = ReadMesh(argv[2]).mesh;
     } else {
         // Get the segmentation
         segID = argv[2];

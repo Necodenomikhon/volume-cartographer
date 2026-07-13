@@ -132,6 +132,9 @@ auto main(int argc, char* argv[]) -> int
     p.setDimensions(height, width);
     p.setMesh(mesh);
     p.setUVMap(uvMap);
+    if (not meshFile.faceUVs.empty()) {
+        p.setTextureFaceUVs(meshFile.faceUVs);
+    }
     p.compute();
 
     // Write PPM

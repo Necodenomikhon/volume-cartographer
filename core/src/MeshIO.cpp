@@ -24,6 +24,7 @@ auto volcart::ReadMesh(const filesystem::path& path) -> MeshReaderResult
         if (not r.getUVMap()->empty()) {
             result.uv = r.getUVMap();
         }
+        result.faceUVs = r.getFaceUVs();
     }
 
     // PLYs

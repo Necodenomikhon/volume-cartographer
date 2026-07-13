@@ -1,9 +1,11 @@
+#include <algorithm>
 #include <cstddef>
 #include <iostream>
 #include <regex>
 #include <vector>
 
 #include <boost/program_options.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 #include "vc/core/filesystem.hpp"
 #include "vc/core/io/FileFilters.hpp"
@@ -66,7 +68,11 @@ auto main(int argc, char* argv[]) -> int
         ("ppm,p", po::value<std::string>()->required(), "Input PPM file")
         ("output-file,o", po::value<std::string>(), "Output PPM or mesh file")
         ("roi", po::value<std::string>(), "String describing origin, width, "
-             "and height of region-of-interest. Format: WxH+X+Y");
+             "and height of region-of-interest. Format: WxH+X+Y")
+        ("texture-uv-vis", po::value<std::string>(), "If the PPM has a "
+             "texture coordinate map (see PerPixelMap::textureCoordMap()), "
+             "write a color-coded visualization of it to this image path: "
+             "red = u, green = v, and unmapped pixels are black.");
 
     po::options_description all("Usage");
     all.add(required);
@@ -132,6 +138,33 @@ auto main(int argc, char* argv[]) -> int
 
     // Restore original locale so file writing doesn't break
     std::locale::global(startLocale);
+
+    // Export a visualization of the texture coordinate map, if requested
+    if (parsed.count("texture-uv-vis") > 0) {
+        const fs::path visPath = parsed["texture-uv-vis"].as<std::string>();
+        auto texCoordMap = ppm.textureCoordMap();
+        if (texCoordMap.empty()) {
+            Logger()->error(
+                "PPM has no texture coordinate map. Cannot write: {}",
+                visPath.string());
+        } else {
+            cv::Mat vis = cv::Mat::zeros(
+                static_cast<int>(h), static_cast<int>(w), CV_8UC3);
+            for (const auto [y, x] : ppm.getMappingCoords()) {
+                const auto uv = texCoordMap.at<cv::Vec2f>(
+                    static_cast<int>(y), static_cast<int>(x));
+                const auto u = std::clamp(uv[0], 0.0F, 1.0F);
+                const auto v = std::clamp(uv[1], 0.0F, 1.0F);
+                // BGR order: red = u, green = v
+                vis.at<cv::Vec3b>(static_cast<int>(y), static_cast<int>(x)) = {
+                    0, static_cast<uchar>(v * 255.0F),
+                    static_cast<uchar>(u * 255.0F)};
+            }
+            Logger()->info(
+                "Writing texture UV visualization: {}", visPath.string());
+            cv::imwrite(visPath.string(), vis);
+        }
+    }
 
     // If we're not saving a PPM, exit
     if (parsed.count("output-file") == 0) {

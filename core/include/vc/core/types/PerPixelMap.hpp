@@ -230,6 +230,29 @@ public:
      * @copydetails cellMap()
      */
     void setCellMap(const cv::Mat& m);
+
+    /**
+     * @brief Get the texture coordinate map image
+     *
+     * The texture coordinate map holds, per-pixel, the original (e.g.
+     * photogrammetry-capture) UV coordinate of the mesh at that pixel's
+     * mapped surface position. This is distinct from the UV space that this
+     * PerPixelMap itself rasterizes, which is produced by a flattening
+     * algorithm and may differ from the mesh's original texture
+     * parameterization. This is an optional feature, and PPMs generated
+     * without a source texture UV map will not have this information
+     * available.
+     *
+     * Stored as a 2-channel, 32-bit float image (`CV_32FC2`).
+     */
+    [[nodiscard]] auto textureCoordMap() const -> cv::Mat;
+
+    /**
+     * @brief Set the texture coordinate map image
+     *
+     * @copydetails textureCoordMap()
+     */
+    void setTextureCoordMap(const cv::Mat& m);
     /**@}*/
 
     /**@{*/
@@ -273,5 +296,8 @@ private:
 
     /** Cell map */
     cv::Mat cellMap_;
+
+    /** Texture coordinate map */
+    cv::Mat textureCoordMap_;
 };
 }  // namespace volcart

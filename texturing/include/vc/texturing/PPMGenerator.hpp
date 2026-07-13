@@ -2,7 +2,9 @@
 
 /** @file */
 
+#include <array>
 #include <cstddef>
+#include <vector>
 
 #include "vc/core/types/ITKMesh.hpp"
 #include "vc/core/types/Mixins.hpp"
@@ -53,6 +55,29 @@ public:
 
     /** @brief Set the input UV map */
     void setUVMap(const UVMap::Pointer& u);
+
+    /**
+     * @brief Set additional, optional per-face-corner source UVs
+     *
+     * When provided, the generated PerPixelMap will additionally store, per
+     * pixel, the interpolated UV coordinate from these per-corner values (see
+     * MeshReaderResult::faceUVs / OBJReader::getFaceUVs()). This is intended
+     * for meshes whose original (e.g. photogrammetry-capture) texture
+     * parameterization differs from the UV map passed to setUVMap(), which is
+     * rasterized to produce this PPM's pixel grid. See
+     * PerPixelMap::textureCoordMap().
+     *
+     * Per-corner values are used, rather than a second UVMap, because a
+     * mesh's source texture parameterization commonly has seams - the same
+     * mesh point legitimately paired with different UVs on different faces -
+     * which a point-keyed UVMap cannot represent without duplicating points,
+     * which would incorrectly alter the mesh's connectivity.
+     *
+     * Must be indexed identically to the mesh's cells, i.e. entry `i`
+     * corresponds to the mesh's i-th cell, in the same per-corner order as
+     * that cell's point IDs.
+     */
+    void setTextureFaceUVs(std::vector<std::array<cv::Vec2d, 3>> faceUVs);
     /**@}*/
 
     /**@{*/
@@ -81,6 +106,8 @@ private:
     ITKMesh::Pointer inputMesh_;
     /** Input UV Map */
     UVMap::Pointer uvMap_;
+    /** Optional additional per-face-corner source texture UVs */
+    std::vector<std::array<cv::Vec2d, 3>> textureFaceUVs_;
 
     /** Working mesh */
     ITKMesh::Pointer workingMesh_;

@@ -2,6 +2,7 @@
 
 /** @file */
 
+#include <array>
 #include <fstream>
 
 #include <opencv2/core.hpp>
@@ -52,6 +53,19 @@ public:
      * exist, throws a volcart::IOException.
      */
     auto getTextureMat() -> cv::Mat;
+
+    /**
+     * @brief Return the exact, per-face-corner UV coordinates
+     *
+     * Unlike getUVMap(), which stores at most one UV coordinate per mesh
+     * point (and so silently collapses UV seams, where the same point is
+     * legitimately paired with different UVs on different faces), this
+     * returns the UV coordinate actually referenced by each corner of each
+     * face, indexed identically to the mesh's cells (i.e. `getFaceUVs()[i]`
+     * corresponds to the mesh's i-th cell). A corner with no UV reference is
+     * volcart::NULL_MAPPING.
+     */
+    auto getFaceUVs() -> std::vector<std::array<cv::Vec2d, 3>>;
 
 private:
     /**
@@ -118,6 +132,8 @@ private:
     std::vector<cv::Vec2d> uvs_;
     /** List of parsed faces */
     std::vector<OBJReader::Face> faces_;
+    /** Per-face-corner UV coordinates, indexed like the mesh's cells */
+    std::vector<std::array<cv::Vec2d, 3>> faceUVs_;
 };
 
 }  // namespace volcart::io

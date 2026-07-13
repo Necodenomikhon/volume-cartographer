@@ -46,6 +46,7 @@ set(type_srcs
     src/Render.cpp
     src/Reslice.cpp
     src/Segmentation.cpp
+    src/TextureStack.cpp
     src/Transforms.cpp
     src/UVMap.cpp
     src/Volume.cpp
@@ -185,6 +186,7 @@ set(test_srcs
     test/TIFFIOTest.cpp
     test/TransformsTest.cpp
     test/SegmentationTest.cpp
+    test/TextureStackTest.cpp
     test/VolumePkgTest.cpp
     test/AnnotationTest.cpp
     test/MemMapTest.cpp
@@ -225,6 +227,7 @@ set(COMMON_TEST_RES
     test/res/vc_core_OBJReader_UntexturedWithNormals.obj
     test/res/vc_core_OBJReader_VariableVertInfo.obj
     test/res/vc_core_OBJReader_VariableVertInfo.mtl
+    test/res/vc_core_OBJReader_UVSeam.obj
     test/res/vc_core_OBJReader_PointCloud.obj
 )
 
