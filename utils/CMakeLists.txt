@@ -37,6 +37,11 @@ add_executable(vc_ppm_tool src/PPMTool.cpp)
 target_link_libraries(vc_ppm_tool VC::core ${VC_FS_LIB} Boost::program_options)
 list(APPEND utils_install_list vc_ppm_tool)
 
+# vc_uv_seam_report
+add_executable(vc_uv_seam_report src/UVSeamReport.cpp)
+target_link_libraries(vc_uv_seam_report VC::core ${VC_FS_LIB} Boost::program_options)
+list(APPEND utils_install_list vc_uv_seam_report)
+
 # vc_uv2mesh
 add_executable(vc_uv2mesh src/UVMaptoFlatMesh.cpp)
 target_link_libraries(vc_uv2mesh
