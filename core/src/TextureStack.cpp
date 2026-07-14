@@ -23,6 +23,10 @@ void TextureStack::addChannel(const std::string& name, const cv::Mat& image)
     cv::Mat converted;
     image.convertTo(converted, CV_MAKETYPE(CV_64F, image.channels()));
 
+    // Flip so that row 0 is the image's bottom row, matching this class's
+    // v=0=bottom UV convention (images are loaded with row 0 = top)
+    cv::flip(converted, converted, 0);
+
     order_.push_back(name);
     channels_.push_back(converted);
 }

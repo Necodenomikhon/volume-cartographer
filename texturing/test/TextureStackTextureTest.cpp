@@ -166,7 +166,10 @@ TEST(TextureStackTexture, ResampleMatchesAnalyticExpectation)
 
         auto rgb = result[1].at<cv::Vec3d>(static_cast<int>(y), static_cast<int>(x));
         EXPECT_NEAR(rgb[0], 255.0 * u, 0.5);
-        EXPECT_NEAR(rgb[1], 255.0 * v, 0.5);
+        // TextureStack::addChannel() flips images so v=0 is the bottom row
+        // (OBJ convention); MakeRGBRamp's g ramps with increasing array row,
+        // so sampling at v retrieves the value at array row (1 - v).
+        EXPECT_NEAR(rgb[1], 255.0 * (1.0 - v), 0.5);
         EXPECT_NEAR(rgb[2], 128.0, 0.5);
     }
 }

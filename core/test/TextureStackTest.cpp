@@ -75,7 +75,8 @@ TEST(TextureStack, SampleHorizontalGradient)
 
 TEST(TextureStack, SampleVerticalGradient)
 {
-    // 5 rows, 1 column: values 0, 64, 128, 192, 255 along y
+    // 5 rows, 1 column: values 0, 64, 128, 192, 255 down the image as
+    // stored on disk (array row 0 = image's top row when viewed normally).
     cv::Mat img(5, 1, CV_8UC1);
     std::array<uchar, 5> vals{0, 64, 128, 192, 255};
     for (int y = 0; y < 5; y++) {
@@ -85,9 +86,11 @@ TEST(TextureStack, SampleVerticalGradient)
     TextureStack stack;
     stack.addChannel("gradY", img);
 
-    EXPECT_NEAR(stack.sample({0.0, 0.0})[0], 0.0, 1e-9);
+    // v=0 is the image's bottom row (OBJ convention), so it must retrieve
+    // the value stored at the image's last array row (255), not its first
+    EXPECT_NEAR(stack.sample({0.0, 0.0})[0], 255.0, 1e-9);
     EXPECT_NEAR(stack.sample({0.0, 0.5})[0], 128.0, 1e-9);
-    EXPECT_NEAR(stack.sample({0.0, 1.0})[0], 255.0, 1e-9);
+    EXPECT_NEAR(stack.sample({0.0, 1.0})[0], 0.0, 1e-9);
 }
 
 TEST(TextureStack, SampleConcatenatesChannelsInOrder)

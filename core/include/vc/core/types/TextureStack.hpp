@@ -17,17 +17,14 @@ namespace volcart
  *
  * A TextureStack holds one or more single- or multi-channel images (e.g. RGB,
  * IR, and UV-fluorescence captures of a surface) that all share the same
- * normalized UV parameterization: pixel `(x, y)` in each image corresponds to
- * normalized coordinate `(x / (width - 1), y / (height - 1))`, regardless of
- * that image's own pixel resolution. This is the same convention used by
- * volcart::texturing::PPMGenerator for its own UV raster, so a UV coordinate
- * produced by PPMGenerator (e.g. PerPixelMap::textureCoordMap()) can be
- * sampled directly against a TextureStack without additional conversion.
- *
- * @note TextureStack does not perform any Y-axis flip. If a texture image's
- * own coordinate convention differs from this (e.g. some OBJ/photogrammetry
- * exports place `v = 0` at the bottom of the image), the caller is
- * responsible for flipping the image or its UV map before use.
+ * normalized UV parameterization, following the standard OBJ/photogrammetry
+ * convention: `u = 0` is the image's left edge and `v = 0` is the image's
+ * *bottom* edge (not its top row). This matches the UV coordinates read by
+ * OBJReader::getFaceUVs() / MeshReaderResult::faceUVs directly, so a capture
+ * UV produced by PPMGenerator (e.g. PerPixelMap::textureCoordMap()) can be
+ * sampled directly against a TextureStack without additional conversion -
+ * addChannel() itself accounts for the flip between this convention and how
+ * image files are stored in memory (row 0 = top).
  *
  * This class is intended as the texture-based analog of volcart::Volume for
  * texturing algorithms that sample from 2D capture images (e.g. RGB, IR,
@@ -51,6 +48,10 @@ public:
      * (e.g. 3 for RGB, 1 for IR); its samples are appended, in the order
      * they're stored in the image, to the output of sample(). Channel names
      * must be unique.
+     *
+     * The image is expected as loaded from disk (row 0 = top); it is
+     * flipped internally so that sample()'s `v = 0` correctly corresponds to
+     * the image's bottom row, per this class's UV convention.
      *
      * @throws std::invalid_argument if the image is empty or the name is
      * already in use
